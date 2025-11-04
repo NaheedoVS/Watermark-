@@ -68,7 +68,7 @@ reset - Reset all settings to default
 
 ### 🟣 **1. Deploy on Heroku (Recommended for Beginners)**
 
-[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/Doctorstra/watermark-bot)
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/NaheedoVS/Watermark)
 
 Make sure to:
 - Set all **environment variables** properly.
