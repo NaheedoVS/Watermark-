@@ -1,4 +1,5 @@
-# (c) @AbirHasan2005
+# (c) @AbirHasan2005 | Updated by GPT-5 (2025)
+# Modern async broadcast handler for Pyrogram 2.x
 
 import os
 import time
@@ -8,93 +9,149 @@ import asyncio
 import datetime
 import aiofiles
 import traceback
+from typing import Tuple, Optional
+
 from configs import Config
 from core.handlers.main_db_handler import db
-from pyrogram.errors import FloodWait, InputUserDeactivated, UserIsBlocked, PeerIdInvalid
+from pyrogram import Client
+from pyrogram.types import Message
+from pyrogram.errors import (
+    FloodWait,
+    InputUserDeactivated,
+    UserIsBlocked,
+    PeerIdInvalid,
+    RPCError,
+)
 
+# Global state for active broadcasts
 broadcast_ids = {}
 
 
-async def send_msg(user_id, message):
+# ────────────────────────────────
+# ✉️ Message Sending Helper
+# ────────────────────────────────
+async def send_msg(user_id: int, message: Message) -> Tuple[int, Optional[str]]:
+    """
+    Send a broadcast message to a single user.
+    Returns (status_code, error_message)
+    """
     try:
-        if Config.BROADCAST_AS_COPY is False:
-            await message.forward(chat_id=user_id)
-        elif Config.BROADCAST_AS_COPY is True:
+        if Config.BROADCAST_AS_COPY:
             await message.copy(chat_id=user_id)
+        else:
+            await message.forward(chat_id=user_id)
         return 200, None
+
     except FloodWait as e:
-        await asyncio.sleep(e.x)
-        return send_msg(user_id, message)
+        await asyncio.sleep(e.value)
+        return await send_msg(user_id, message)
     except InputUserDeactivated:
-        return 400, f"{user_id} : deactivated\n"
+        return 400, f"{user_id}: deactivated\n"
     except UserIsBlocked:
-        return 400, f"{user_id} : blocked the bot\n"
+        return 400, f"{user_id}: blocked the bot\n"
     except PeerIdInvalid:
-        return 400, f"{user_id} : user id invalid\n"
-    except Exception as e:
-        return 500, f"{user_id} : {traceback.format_exc()}\n"
+        return 400, f"{user_id}: invalid user ID\n"
+    except RPCError as e:
+        return 500, f"{user_id}: RPCError - {str(e)}\n"
+    except Exception:
+        return 500, f"{user_id}: {traceback.format_exc()}\n"
 
 
-async def broadcast_handler(c, m):
-    all_users = await db.get_all_users()
+# ────────────────────────────────
+# 📣 Broadcast Handler
+# ────────────────────────────────
+async def broadcast_handler(c: Client, m: Message):
+    """
+    Broadcast a replied message to all users asynchronously.
+    Compatible with Pyrogram 2.x & Python 3.12+
+    """
     broadcast_msg = m.reply_to_message
+    if not broadcast_msg:
+        return await m.reply_text("⚠️ Reply to a message to broadcast it.")
+
+    # Generate unique broadcast ID
     while True:
-        broadcast_id = ''.join([random.choice(string.ascii_letters) for i in range(3)])
-        if not broadcast_ids.get(broadcast_id):
+        broadcast_id = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+        if broadcast_id not in broadcast_ids:
             break
-    out = await m.reply_text(
-        text=f"Broadcast Started! You will be notified with log file when all the users are notified."
-    )
+
     start_time = time.time()
     total_users = await db.total_users_count()
-    done = 0
-    failed = 0
-    success = 0
-    broadcast_ids[broadcast_id] = dict(
-        total=total_users,
-        current=done,
-        failed=failed,
-        success=success
-    )
-    async with aiofiles.open('broadcast.txt', 'w') as broadcast_log_file:
-        async for user in all_users:
-            sts, msg = await send_msg(
-                user_id=int(user['id']),
-                message=broadcast_msg
-            )
-            if msg is not None:
-                await broadcast_log_file.write(msg)
+
+    # Initialize broadcast state
+    broadcast_ids[broadcast_id] = {
+        "total": total_users,
+        "current": 0,
+        "failed": 0,
+        "success": 0,
+    }
+
+    log_file = "broadcast_log.txt"
+    out = await m.reply_text("📢 Broadcast started... Please wait!")
+
+    success, failed, done = 0, 0, 0
+    start_dt = datetime.datetime.now()
+
+    async with aiofiles.open(log_file, "w") as log:
+        async for user in db.get_all_users():
+            if broadcast_id not in broadcast_ids:
+                break
+
+            sts, err = await send_msg(int(user["id"]), broadcast_msg)
+            if err:
+                await log.write(err)
+
             if sts == 200:
                 success += 1
             else:
                 failed += 1
-            if sts == 400:
-                await db.delete_user(user['id'])
+                if sts == 400:
+                    await db.delete_user(user["id"])
+
             done += 1
-            if broadcast_ids.get(broadcast_id) is None:
-                break
-            else:
-                broadcast_ids[broadcast_id].update(
-                    dict(
-                        current=done,
-                        failed=failed,
-                        success=success
+            broadcast_ids[broadcast_id].update(
+                {"current": done, "failed": failed, "success": success}
+            )
+
+            # Update progress every 50 users
+            if done % 50 == 0 or done == total_users:
+                try:
+                    await out.edit_text(
+                        f"📤 **Broadcast Progress:**\n"
+                        f"👥 Total: `{total_users}`\n"
+                        f"✅ Success: `{success}`\n"
+                        f"⚠️ Failed: `{failed}`\n"
+                        f"📈 Done: `{done}`\n"
+                        f"🕒 Elapsed: `{str(datetime.timedelta(seconds=int(time.time() - start_time)))}`"
                     )
-                )
-    if broadcast_ids.get(broadcast_id):
-        broadcast_ids.pop(broadcast_id)
-    completed_in = datetime.timedelta(seconds=int(time.time() - start_time))
-    await asyncio.sleep(3)
+                except Exception:
+                    pass
+
+            # Prevent hitting flood limits
+            await asyncio.sleep(0.05)
+
+    # Remove from active broadcasts
+    broadcast_ids.pop(broadcast_id, None)
+    duration = datetime.timedelta(seconds=int(time.time() - start_time))
+
     await out.delete()
-    if failed == 0:
-        await m.reply_text(
-            text=f"broadcast completed in `{completed_in}`\n\nTotal users {total_users}.\nTotal done {done}, {success} success and {failed} failed.",
-            quote=True
+    summary = (
+        f"✅ **Broadcast Completed**\n\n"
+        f"🕒 Duration: `{duration}`\n"
+        f"👥 Total: `{total_users}`\n"
+        f"✅ Success: `{success}`\n"
+        f"⚠️ Failed: `{failed}`"
+    )
+
+    # Send summary with log file (if any errors)
+    if failed > 0:
+        await m.reply_document(
+            document=log_file,
+            caption=summary,
+            quote=True,
         )
     else:
-        await m.reply_document(
-            document='broadcast.txt',
-            caption=f"broadcast completed in `{completed_in}`\n\nTotal users {total_users}.\nTotal done {done}, {success} success and {failed} failed.",
-            quote=True
-        )
-    os.remove('broadcast.txt')
+        await m.reply_text(summary, quote=True)
+
+    if os.path.exists(log_file):
+        os.remove(log_file)
