@@ -1,107 +1,177 @@
-# (c) @AbirHasan2005
+# (c) @AbirHasan2005 | Updated by GPT-5 (2025)
+# Modern FFmpeg integration for Telegram Video Watermark Bot
 
-# This is Telegram Video Watermark Adder Bot's Source Code.
-# I Hardly Made This. So Don't Forget to Give Me Credits.
-# Done this Huge Task for Free. If you guys not support me,
-# I will stop making such things!
-
-# Edit anything at your own risk!
-
-# Don't forget to help me if I done any mistake in the codes.
-# Support Group: @linux_repo 
-# Bots Channel: @Discovery_Updates
-
-import os
+import asyncio
 import math
+import os
 import re
 import json
-import subprocess
 import time
-import shlex
-import asyncio
+from pathlib import Path
+from typing import Optional
 from configs import Config
-from typing import Tuple
 from humanfriendly import format_timespan
 from core.display_progress import TimeFormatter
-from pyrogram.errors.exceptions.flood_420 import FloodWait
+from pyrogram.errors import FloodWait
 
 
-async def vidmark(the_media, message, working_dir, watermark_path, output_vid, total_time, logs_msg, status, mode, position, size):
-    file_genertor_command = [
+async def vidmark(
+    the_media: str,
+    message,
+    working_dir: str,
+    watermark_path: str,
+    output_vid: str,
+    total_time: float,
+    logs_msg,
+    status_path: str,
+    preset: str,
+    position: str,
+    size: str
+) -> Optional[str]:
+    """
+    Add watermark to a video asynchronously using FFmpeg.
+    Modernized for async I/O and safe progress handling.
+    """
+
+    progress_file = Path(working_dir) / "progress.txt"
+    if progress_file.exists():
+        progress_file.unlink()
+
+    command = [
         "ffmpeg",
         "-hide_banner",
-        "-loglevel",
-        "quiet",
-        "-progress",
-        working_dir,
-        "-i",
-        the_media,
-        "-i",
-        watermark_path,
+        "-y",
+        "-loglevel", "error",
+        "-progress", str(progress_file),
+        "-i", the_media,
+        "-i", watermark_path,
         "-filter_complex",
         f"[1][0]scale2ref=w='iw*{size}/100':h='ow/mdar'[wm][vid];[vid][wm]overlay={position}",
-        "-c:v",
-        "h264",
-        "-preset",
-        mode,
-        "-tune",
-        "film",
-        "-c:a",
-        "copy",
+        "-c:v", "libx264",
+        "-preset", preset,
+        "-tune", "film",
+        "-c:a", "copy",
         output_vid
     ]
-    COMPRESSION_START_TIME = time.time()
+
     process = await asyncio.create_subprocess_exec(
-        *file_genertor_command,
+        *command,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    with open(status, 'r+') as f:
-        statusMsg = json.load(f)
-        statusMsg['pid'] = process.pid
-        f.seek(0)
-        json.dump(statusMsg, f, indent=2)
-    while process.returncode != 0:
-        await asyncio.sleep(5)
-        with open(working_dir, 'r+') as file:
-            text = file.read()
-            frame = re.findall("frame=(\d+)", text)
-            time_in_us=re.findall("out_time_ms=(\d+)", text)
-            progress=re.findall("progress=(\w+)", text)
-            speed=re.findall("speed=(\d+\.?\d*)", text)
-            if len(frame):
-                frame = int(frame[-1])
-            else:
-                frame = 1;
-            if len(speed):
-                speed = speed[-1]
-            else:
-                speed = 1;
-            if len(time_in_us):
-                time_in_us = time_in_us[-1]
-            else:
-                time_in_us = 1;
-            if len(progress):
-                if progress[-1] == "end":
-                    break
-            execution_time = TimeFormatter((time.time() - COMPRESSION_START_TIME)*1000)
-            elapsed_time = int(time_in_us)/1000000
-            difference = math.floor( (total_time - elapsed_time) / float(speed) )
-            ETA = "-"
-            if difference > 0:
-                ETA = TimeFormatter(difference*1000)
-            percentage = math.floor(elapsed_time * 100 / total_time)
-            progress_str = "📊 **Progress:** {0}%\n`[{1}{2}]`".format(
-                round(percentage, 2),
-                ''.join(["▓" for i in range(math.floor(percentage / 10))]),
-                ''.join(["░" for i in range(10 - math.floor(percentage / 10))])
-                )
-            stats = f'📦️ **Adding Watermark [Preset: `{mode}`]**\n\n' \
-                    f'⏰️ **ETA:** `{ETA}`\n❇️ **Position:** `{position}`\n🔰 **PID:** `{process.pid}`\n🔄 **Duration: `{format_timespan(total_time)}`**\n\n' \
-                    f'{progress_str}\n'
-            try:
-                await logs_msg.edit(text=stats)
-                await message.edit(text=stats)
+
+    # Write process ID to status.json
+    try:
+        with open(status_path, "w") as f:
+            json.dump({"pid": process.pid}, f, indent=2)
+    except Exception:
+        pass
+
+    start_time = time.time()
+    last_update = 0
+
+    # Periodically read progress updates from FFmpeg
+    while True:
+        await asyncio.sleep(3)
+        if not progress_file.exists():
+            continue
+
+        try:
+            text = progress_file.read_text()
+            out_time_ms = _extract_value(text, r"out_time_ms=(\d+)")
+            progress = _extract_value(text, r"progress=(\w+)") or "continue"
+            speed = float(_extract_value(text, r"speed=(\d+\.?\d*)") or 1.0)
+
+            elapsed_sec = int(out_time_ms) / 1_000_000
+            percentage = min(100, (elapsed_sec / total_time) * 100)
+            remaining = max(0, total_time - elapsed_sec)
+            eta = TimeFormatter(remaining / speed * 1000)
+
+            # Progress bar visualization
+            filled = "▓" * int(percentage // 10)
+            empty = "░" * (10 - int(percentage // 10))
+            progress_bar = f"[{filled}{empty}]"
+
+            stats = (
+                f"📦 **Adding Watermark [Preset: `{preset}`]**\n\n"
+                f"{progress_bar} `{percentage:.2f}%`\n"
+                f"⏰ **ETA:** `{eta}`\n"
+                f"🎞 **Position:** `{position}`\n"
+                f"⚙️ **PID:** `{process.pid}`\n"
+                f"🕒 **Duration:** `{format_timespan(total_time)}`"
+            )
+
+            # Throttle message edits
+            if time.time() - last_update > 3:
+                await _safe_edit(message, stats)
+                await _safe_edit(logs_msg, stats)
+                last_update = time.time()
+
+            if progress == "end":
+                break
+
+        except Exception as e:
+            print(f"⚠️ FFmpeg progress read error: {e}")
+
+        if process.returncode is not None:
+            break
+
+    # Wait for process completion
+    await process.wait()
+    stdout, stderr = await process.communicate()
+
+    if Path(output_vid).exists():
+        print(f"✅ FFmpeg completed successfully: {output_vid}")
+        return output_vid
+    else:
+        print(f"❌ FFmpeg failed: {stderr.decode()}")
+        return None
+
+
+async def take_screen_shot(video_file: str, output_directory: str, ttl: int) -> Optional[str]:
+    """Capture a frame at given timestamp."""
+    output_path = Path(output_directory) / f"{int(time.time())}.jpg"
+
+    command = [
+        "ffmpeg",
+        "-ss", str(ttl),
+        "-i", video_file,
+        "-frames:v", "1",
+        "-q:v", "2",
+        str(output_path)
+    ]
+
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    await process.wait()
+
+    if output_path.exists():
+        return str(output_path)
+    return None
+
+
+# ────────────────────────────────
+# 🔧 Helper Functions
+# ────────────────────────────────
+def _extract_value(text: str, pattern: str) -> Optional[str]:
+    """Extract value from FFmpeg progress log using regex."""
+    match = re.findall(pattern, text)
+    return match[-1] if match else None
+
+
+async def _safe_edit(msg, text: str):
+    """Edit Telegram messages safely to avoid flood errors."""
+    if not msg:
+        return
+    try:
+        await msg.edit_text(text, disable_web_page_preview=True)
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+    except Exception:
+        pass
             except FloodWait as e:
                 await asyncio.sleep(e.x)
                 pass
