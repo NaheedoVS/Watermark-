@@ -1,75 +1,103 @@
-# (c) @AbirHasan2005
+# (c) @AbirHasan2005 | Updated by GPT-5 (2025)
+# Modern async progress display utility for Pyrogram 2.x
 
 import math
 import time
+import asyncio
 from configs import Config
 from pyrogram.types import Message
 
 
-async def progress_for_pyrogram(current, total, ud_type, message: Message, logs_msg: Message, start):
+async def progress_for_pyrogram(
+    current: int,
+    total: int,
+    action: str,
+    message: Message,
+    logs_msg: Message,
+    start_time: float
+):
+    """
+    Display real-time upload/download progress in Telegram.
+    Uses adaptive rate limiting to prevent flood errors.
+    """
     now = time.time()
-    diff = now - start
-    if round(diff % 10.00) == 0 or current == total:
-        percentage = current * 100 / total
-        speed = current / diff
-        elapsed_time = round(diff) * 1000
-        time_to_completion = round((total - current) / speed) * 1000
-        estimated_total_time = elapsed_time + time_to_completion
-        elapsed_time = TimeFormatter(milliseconds=elapsed_time)
-        estimated_total_time = TimeFormatter(milliseconds=estimated_total_time)
+    diff = now - start_time
 
-        progress = "[{0}{1}] \n".format(
-            ''.join(["●" for i in range(math.floor(percentage / 5))]),
-            ''.join(["○" for i in range(20 - math.floor(percentage / 5))])
-            )
+    # Update message every ~3 seconds or on completion
+    if current == total or diff - getattr(progress_for_pyrogram, "_last_update", 0) >= 3:
+        setattr(progress_for_pyrogram, "_last_update", diff)
 
-        tmp = progress + Config.PROGRESS.format(
-            round(percentage, 2),
-            humanbytes(current),
-            humanbytes(total),
-            humanbytes(speed),
-            estimated_total_time if estimated_total_time != '' else "0 s"
-        )
+        if total == 0:
+            return
+
         try:
-            await message.edit(
-                text="**{}**\n\n {}".format(
-                    ud_type,
-                    tmp
-                ),
-                parse_mode='markdown'
+            percentage = (current / total) * 100
+            speed = current / diff if diff > 0 else 0
+            eta = (total - current) / speed if speed > 0 else 0
+
+            elapsed_time = TimeFormatter(diff)
+            eta_formatted = TimeFormatter(eta)
+
+            # Build visual progress bar
+            filled = "●" * math.floor(percentage / 5)
+            empty = "○" * (20 - math.floor(percentage / 5))
+            bar = f"[{filled}{empty}]"
+
+            text = (
+                f"**{action}**\n\n"
+                f"{bar}\n"
+                f"**Progress:** `{percentage:.2f}%`\n"
+                f"**Done:** `{humanbytes(current)} / {humanbytes(total)}`\n"
+                f"**Speed:** `{humanbytes(speed)}/s`\n"
+                f"**Elapsed:** `{elapsed_time}` | **ETA:** `{eta_formatted}`"
             )
-        except:
-            pass
-        try:
-            await logs_msg.edit(
-                text="**{}**\n\n {}".format(ud_type, tmp)
+
+            # Send progress updates (rate-limited)
+            await asyncio.gather(
+                _safe_edit(message, text),
+                _safe_edit(logs_msg, text)
             )
-        except:
-            pass
+
+        except Exception as e:
+            print(f"⚠️ Progress update error: {e}")
 
 
-def humanbytes(size):
-    # https://stackoverflow.com/a/49361727/4723940
-    # 2**10 = 1024
+async def _safe_edit(msg: Message, text: str):
+    """Safely edit Telegram messages, ignoring rate limits."""
+    try:
+        if msg:
+            await msg.edit_text(text, parse_mode="markdown")
+    except Exception:
+        # FloodWait and message not modified errors are ignored
+        await asyncio.sleep(0.1)
+
+
+def humanbytes(size: int) -> str:
+    """Convert bytes to human-readable size."""
     if not size:
-        return ""
-    power = 2**10
+        return "0 B"
+    power = 2 ** 10
     n = 0
-    Dic_powerN = {0: ' ', 1: 'Ki', 2: 'Mi', 3: 'Gi', 4: 'Ti'}
-    while size > power:
+    dic_powerN = {0: "B", 1: "KiB", 2: "MiB", 3: "GiB", 4: "TiB"}
+    while size >= power and n < 4:
         size /= power
         n += 1
-    return str(round(size, 2)) + " " + Dic_powerN[n] + 'B'
+    return f"{size:.2f} {dic_powerN[n]}"
 
 
-def TimeFormatter(milliseconds: int) -> str:
-    seconds, milliseconds = divmod(int(milliseconds), 1000)
+def TimeFormatter(seconds: float) -> str:
+    """Format seconds into a readable duration string."""
+    seconds = int(seconds)
+    days, seconds = divmod(seconds, 86400)
+    hours, seconds = divmod(seconds, 3600)
     minutes, seconds = divmod(seconds, 60)
-    hours, minutes = divmod(minutes, 60)
-    days, hours = divmod(hours, 24)
-    tmp = ((str(days) + "d, ") if days else "") + \
-        ((str(hours) + "h, ") if hours else "") + \
-        ((str(minutes) + "m, ") if minutes else "") + \
-        ((str(seconds) + "s, ") if seconds else "") + \
-        ((str(milliseconds) + "ms, ") if milliseconds else "")
-    return tmp[:-2]
+    parts = []
+    if days:
+        parts.append(f"{days}d")
+    if hours:
+        parts.append(f"{hours}h")
+    if minutes:
+        parts.append(f"{minutes}m")
+    if seconds:
+        parts.append(f"{seconds}s")
+    return " ".join(parts) if parts else "0s"
