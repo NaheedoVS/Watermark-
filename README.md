@@ -1,40 +1,54 @@
-# Watermark-Bot
-A Telegram Video Watermark Adder Bot by [@Doctorstra](https://github.com/Doctorstra)
+# 🎬 Telegram Video Watermark Adder Bot
 
-## Features:
-- Save Custom Watermark Image.
-- Auto Resize Watermark According to Video quality.
-- Easy Apply saved watermark to video.
-- Progress of all tasks.
-- Can Choose [FFMPEG](https://www.ffmpeg.org/) Process Preset.
-- Can Cancel Process. *(Beta)*
-- Any Channel or Group Force Sub.
-- Logs Process in any channel.
-- Broadcast Feature.
-- Can Save Watermark Position for users.
-- Can Save Watermark Size for users.
-- Can Upload to [Streamtape](https://streamtape.com/) if File Size is more than 2GB.
+A modern Telegram bot that adds custom image watermarks to your videos — built with **Pyrogram 2.x** and **FFmpeg**.  
+Developed by [@Doctorstra](https://github.com/Doctorstra), updated for 2025 deployment compatibility.
 
-### Demo Bot:
-<a href="https://t.me/Dads_links_VideoWatermark_Bot"><img src="https://img.shields.io/badge/Demo-Telegram%20Bot-blue.svg?logo=telegram"></a>
+---
 
-## Configs:
-- `API_ID` - Get this from [@TeleORG_Bot](https://t.me/TeleORG_Bot)
-- `API_HASH` - Get this from [@TeleORG_Bot](https://t.me/TeleORG_Bot)
-- `BOT_TOKEN` - Get this from [@BotFather](https://t.me/BotFather)
-- `BOT_USERNAME` - You Bot Username. *(Without [@])*
-- `LOG_CHANNEL` - Logs Channel ID
-- `OWNER_ID` - Bot Owner UserID
-- `DATABASE_URL` - MongoDB Database URI
-- `UPDATES_CHANNEL` - Force Sub Channel ID *(Optional)*
-- `PRESET` - Video Encoding Preset Type *(Optional)*
-	- Better put `ultrafast` or `superfast` or `veryfast`
-- `STREAMTAPE_API_PASS` - Get this from [Here](https://streamtape.com/accpanel#collapseThree).
-	- For Uploading to Streamtape if File Size is more than 2GB.
-- `STREAMTAPE_API_USERNAME` - Get this from [Here](https://streamtape.com/accpanel#collapseThree).
-	- For Uploading to Streamtape if File Size is more than 2GB.
+## ✨ Features
 
-## BotFather Commands:
+- 🖼️ Save a custom watermark image (JPG/PNG)
+- 📏 Automatically resizes watermark to video resolution
+- ⚙️ Adjustable watermark **position** and **size**
+- 💾 Remembers user settings
+- 📡 Progress tracking for uploads/downloads
+- 🚫 Cancel ongoing process anytime
+- 🧩 Force subscription (optional)
+- 🗂️ Logging and admin broadcast system
+- ☁️ Uploads to [Streamtape](https://streamtape.com/) for large videos (>2GB)
+- 🔧 Configurable FFmpeg encoding presets
+
+---
+
+## 🤖 Demo Bot
+
+<a href="https://t.me/Dads_links_VideoWatermark_Bot"><img src="https://img.shields.io/badge/Try%20on-Telegram-blue?logo=telegram" alt="Demo Bot"></a>
+
+---
+
+## ⚙️ Environment Variables (Configs)
+
+| Variable | Description |
+|-----------|--------------|
+| `API_ID` | Telegram API ID from [my.telegram.org](https://my.telegram.org) |
+| `API_HASH` | Telegram API hash from [my.telegram.org](https://my.telegram.org) |
+| `BOT_TOKEN` | Bot token from [@BotFather](https://t.me/BotFather) |
+| `BOT_USERNAME` | Your bot username (without `@`) |
+| `OWNER_ID` | Telegram user ID of the bot owner |
+| `LOG_CHANNEL` | Channel ID for logs |
+| `DATABASE_URL` | MongoDB URI for saving user data |
+| `UPDATES_CHANNEL` | (Optional) Force-subscription channel ID |
+| `PRESET` | (Optional) FFmpeg preset (default: `ultrafast`) |
+| `STREAMTAPE_API_USERNAME` | (Optional) Streamtape API username |
+| `STREAMTAPE_API_PASS` | (Optional) Streamtape API password |
+| `ALLOW_UPLOAD_TO_STREAMTAPE` | `True` / `False` to enable Streamtape uploads |
+| `BROADCAST_AS_COPY` | `True` / `False` for broadcast behavior |
+
+---
+
+## 💬 BotFather Commands
+
+:
 ```
 start - start the bot
 status - Show number of users in DB & Bot Status
@@ -47,25 +61,31 @@ reset - Reset all settings to default
 ### Support Group:
 <a href="https://t.me/Dads_links"><img src="https://img.shields.io/badge/Telegram-Join%20Telegram%20Group-blue.svg?logo=telegram"></a>
 
-## Deploy:
 
-#### Easiest Way [Deploy To Heroku] 😪
+---
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/NaheedoVS/Watermark)
+## 🚀 Deployment Options
 
-#### Video Tutorial:
-[![YouTube](https://img.shields.io/badge/YouTube-Video%20Tutorial-red?logo=youtube)](https://www.youtube.com/watch?v=A7wnaKMHpvU&t)
+### 🟣 **1. Deploy on Heroku (Recommended for Beginners)**
 
-#### The Hard Way 🤕
-```sh
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/Doctorstra/watermark-bot)
+
+Make sure to:
+- Set all **environment variables** properly.
+- Use stack `heroku-24` (Python 3.12+).
+
+---
+
+### 🟩 **2. Deploy Locally / VPS**
+
+```bash
 git clone https://github.com/Doctorstra/watermark-bot
-cd Watermark-Bot
-virtualenv -p python3 VENV
-. ./VENV/bin/activate
-pip3 install -r requirements.txt
---- EDIT configs.py values appropriately ---
+cd watermark-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 python3 bot.py
-```
+
 
 ### Follow on:
 <p align="left">
