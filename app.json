@@ -1,60 +1,61 @@
 {
-    "name": "Telegram Video Watermark Adder Bot",
-    "description": "A Telegram Video Watermark Adder Bot in Pyrogram by @AbirHasan2005",
-    "keywords": [
-        "telegram",
-        "files",
-        "store",
-        "bot"
-    ],
-    "repository": "https://github.com/Doctorstra/watermark-bot",
-    "website": "https://telegram.dog/Dads_links",
-    "success_url": "https://t.me/Dads_links",
-    "env": {
-        "API_ID": {
-            "description": "Get this value from my.telegram.org or @TeleORG_Bot"
-        },
-        "API_HASH": {
-            "description": "Get this value from my.telegram.org or @TeleORG_Bot"
-        },
-        "BOT_TOKEN": {
-            "description": "Get this from @BotFather XD"
-        },
-        "BOT_USERNAME": {
-            "description": "Your Bot Username which you sent to @BotFather (Without [@])"
-        },
-        "OWNER_ID": {
-            "description": "Bot Owner UserID"
-        },
-        "DATABASE_URL": {
-            "description": "MongoDB Database URI for Saving UserID for Broadcast."
-        },
-        "UPDATES_CHANNEL": {
-            "description": "ID of a Channel which you want to do Force Sub to use the bot. Example: -100123456789",
-            "required": false
-        },
-        "LOG_CHANNEL": {
-            "description": "Logs Channel ID for some Tracking XD. Example: -100123456789"
-        },
-        "PRESET": {
-            "description": "Video Encoding Preset Type. Better put ultrafast or superfast or veryfast (Optional)",
-            "required": false,
-            "value": "ultrafast"
-        }
+  "name": "Telegram Video Watermark Adder Bot",
+  "description": "A Telegram bot that adds watermarks to videos using Pyrogram.",
+  "repository": "https://github.com/Doctorstra/watermark-bot",
+  "keywords": [
+    "telegram",
+    "pyrogram",
+    "video",
+    "watermark",
+    "bot"
+  ],
+  "website": "https://t.me/Dads_links",
+  "success_url": "https://t.me/Dads_links",
+  "env": {
+    "API_ID": {
+      "description": "Get this value from https://my.telegram.org or use @TeleORG_Bot"
     },
-    "buildpacks": [ 
-        {
-            "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest"
-        }, 
-        { 
-            "url": "heroku/python"
-        }
-    ],
-    "stack": "heroku-24",
-    "formation": {
-        "worker": {
-            "quantity": 1,
-            "size": "dyno-32c-64gb"
-        }
-    } 
+    "API_HASH": {
+      "description": "Get this value from https://my.telegram.org or use @TeleORG_Bot"
+    },
+    "BOT_TOKEN": {
+      "description": "Get this from @BotFather"
+    },
+    "BOT_USERNAME": {
+      "description": "Your bot's username without @ symbol"
+    },
+    "OWNER_ID": {
+      "description": "Numeric Telegram user ID of the bot owner"
+    },
+    "DATABASE_URL": {
+      "description": "MongoDB connection URI for storing user data and broadcast info"
+    },
+    "UPDATES_CHANNEL": {
+      "description": "Optional. Telegram channel ID for force subscription (-100123456789)",
+      "required": false
+    },
+    "LOG_CHANNEL": {
+      "description": "Telegram chat ID for logging (-100123456789)"
+    },
+    "PRESET": {
+      "description": "FFmpeg encoding preset (ultrafast, superfast, veryfast, etc.)",
+      "required": false,
+      "value": "ultrafast"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git"
+    },
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-python.git"
+    }
+  ],
+  "stack": "heroku-24",
+  "formation": {
+    "worker": {
+      "quantity": 1,
+      "size": "eco"
+    }
+  }
 }
