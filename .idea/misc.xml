@@ -1,4 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.7" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" languageLevel="PYTHON312" default="true" project-jdk-name="Python 3.12" project-jdk-type="Python SDK">
+    <output url="file://$PROJECT_DIR$/out" />
+  </component>
+
+  <component name="PythonCompatibilityInspection">
+    <option name="ourVersions">
+      <list>
+        <option value="3.12" />
+      </list>
+    </option>
+  </component>
+
+  <component name="ProjectType">
+    <option name="id" value="Python" />
+  </component>
+
+  <component name="VirtualEnvSettings">
+    <option name="sdkHome" value="$PROJECT_DIR$/venv/bin/python3" />
+    <option name="enabled" value="true" />
+  </component>
 </project>
