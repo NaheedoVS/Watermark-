@@ -1,6 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <!-- Git integration for the project -->
   <component name="VcsDirectoryMappings">
+    <!-- Map the entire project directory to Git -->
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+  </component>
+
+  <!-- Modern Git settings -->
+  <component name="GitSharedSettings">
+    <!-- Use rebase by default when pulling -->
+    <option name="FORCE_PUSH_PROHIBITED" value="false" />
+    <option name="AUTO_COMMIT_ON_CHERRY_PICK" value="true" />
+    <option name="UPDATE_METHOD" value="REBASE" />
+    <option name="ROOT_SYNC" value="true" />
+  </component>
+
+  <!-- Remote repository awareness -->
+  <component name="GitRepositoryMappings">
+    <mapping 
+      directory="$PROJECT_DIR$"
+      url="https://github.com/Doctorstra/watermark-bot.git"
+      branch="main" />
+  </component>
+
+  <!-- Exclude IDE and venv folders from version control -->
+  <component name="GitIgnoreSettings">
+    <option name="ENABLED" value="true" />
+    <option name="IGNORE_FILE_PATH" value="$PROJECT_DIR$/.gitignore" />
   </component>
 </project>
