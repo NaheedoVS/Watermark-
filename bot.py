@@ -496,7 +496,7 @@ async def video_handler(bot, cmd):
 	elif int(watermark_size) == 45:
 		size_tag = "45%"
 	else:
-		size_tag = "7%"
+		size_tag = "7%")
 
 	# compression settings (temporary, in-memory)
 	user_cfg = get_user_comp_settings(cmd.from_user.id)
